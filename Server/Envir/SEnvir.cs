@@ -11,7 +11,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Library;
 using Library.Network;
 using Library.SystemModels;
@@ -1922,10 +1921,10 @@ namespace Server.Envir
                 payment.Error = error;
 
                 if (values.TryGetValue("payment_date", out tempString))
-                    payment.PaymentDate = HttpUtility.UrlDecode(tempString);
+                    payment.PaymentDate = WebUtility.UrlDecode(tempString);
 
                 if (values.TryGetValue("receiver_email", out tempString))
-                    payment.Receiver_EMail = HttpUtility.UrlDecode(tempString);
+                    payment.Receiver_EMail = WebUtility.UrlDecode(tempString);
                 else
                     payment.Error = true;
 
@@ -1955,7 +1954,7 @@ namespace Server.Envir
                     payment.Error = true;
 
                 if (values.TryGetValue("payer_email", out tempString))
-                    payment.Payer_EMail = HttpUtility.UrlDecode(tempString);
+                    payment.Payer_EMail = WebUtility.UrlDecode(tempString);
 
                 if (values.TryGetValue("payer_id", out tempString))
                     payment.Payer_ID = tempString;
