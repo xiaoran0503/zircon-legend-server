@@ -1,0 +1,16 @@
+# 构建上下文排除项（镜像构建只需要源码 + 子模块源码）
+.git
+.gitmodules
+**/.git
+**/.git/**
+datas
+datas/**
+.build
+.artifacts
+**/bin
+**/obj
+**/*.pdb
+Images
+docker-compose.yml
+Dockerfile.upstream-release
+*.zip
