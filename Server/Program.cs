@@ -7,7 +7,7 @@ using System.Reflection;
 
 ConfigReader.Load();
 
-string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+string version = Assembly.GetExecutingAssembly().GetName()?.Version?.ToString() ?? "0.0.0.0";
 
 
 

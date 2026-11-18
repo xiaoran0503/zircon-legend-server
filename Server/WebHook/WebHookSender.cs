@@ -47,7 +47,7 @@ namespace Server.WebHook
             {
                 try
                 {
-                    var json = JsonSerializer.Serialize(payload, payload.GetType(), _jsonOptions);
+                    var json = Serialize(payload);
                     using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     var response = await _httpClient.PostAsync(uri, content)
@@ -130,6 +130,20 @@ namespace Server.WebHook
                 FailReason = MapFailReason(reason)
             };
             return SendAsync(payload);
+        }
+
+        /// <summary>
+        /// 按具体载荷类型走源生成序列化；未知类型回退到反射选项，保证行为兼容。
+        /// </summary>
+        private static string Serialize(WebHookEventPayload payload)
+        {
+            return payload switch
+            {
+                OnlineCountPeriodicPayload p => JsonSerializer.Serialize(p, WebHookJsonContext.Default.OnlineCountPeriodicPayload),
+                ThresholdCrossingPayload p => JsonSerializer.Serialize(p, WebHookJsonContext.Default.ThresholdCrossingPayload),
+                LoginResultPayload p => JsonSerializer.Serialize(p, WebHookJsonContext.Default.LoginResultPayload),
+                _ => JsonSerializer.Serialize(payload, payload.GetType(), _jsonOptions),
+            };
         }
 
         private static string MapFailReason(LoginResultStatus reason)

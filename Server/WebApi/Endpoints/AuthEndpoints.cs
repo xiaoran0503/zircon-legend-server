@@ -144,7 +144,7 @@ namespace Server.WebApi.Endpoints
             var success = dataService.InitializeSuperAdmin();
             if (success)
             {
-                WebApiLogger.Audit(null, ip, "初始化超管", "创建默认超管账号");
+                WebApiLogger.Audit((string?)null, ip, "初始化超管", "创建默认超管账号");
                 return Results.Ok(new { message = "Super admin initialized successfully" });
             }
 

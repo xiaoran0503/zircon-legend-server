@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -301,7 +302,8 @@ namespace Server.Envir
         private const string Completed = "Completed";
         private const string Currency = "GBP";
 
-        private static readonly Dictionary<decimal, int> GoldTable = new Dictionary<decimal, int>
+        // 充值档位对照表：初始化后不再变更，冻结为只读字典
+        private static readonly FrozenDictionary<decimal, int> GoldTable = new Dictionary<decimal, int>
         {
             {5M, 500},
             {10M, 1030},
@@ -310,7 +312,7 @@ namespace Server.Envir
             {30M, 3360},
             {50M, 5750},
             {100M, 12000},
-        };
+        }.ToFrozenDictionary();
 
         public const string VerifiedPath = @".\Database\Store\Verified\",
             InvalidPath = @".\Database\Store\Invalid\",
@@ -1016,9 +1018,9 @@ namespace Server.Envir
                         }
                     }
                 }
-                catch(Exception ex) 
-                { 
-                    Log($"加载欢迎语文件出现异常 {Config.WelcomeWordsFile}"); 
+                catch
+                {
+                    Log($"加载欢迎语文件出现异常 {Config.WelcomeWordsFile}");
                 }
             }
 
@@ -3165,7 +3167,6 @@ namespace Server.Envir
             int limit = Config.最高转生次数 + 1;
             List<TagRebirthInfo> result = new();
 
-            int loaded = 0;
             var lines = File.ReadAllLines(Config.转生标识设置文件);
             foreach(var line in lines)
             {

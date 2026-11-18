@@ -2774,7 +2774,6 @@ namespace Zircon.Server.Models
             {
                 var tmp = parts[i].Split('=');
                 int min, max;
-                MonsterInfoStat? stat;
 
                 switch (tmp[0].ToLower())
                 {

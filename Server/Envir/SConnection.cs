@@ -421,7 +421,7 @@ namespace Server.Envir
                         curSize = (int)total - index;
 
                     datas = new byte[curSize];
-                    stream.Read(datas, 0, curSize);
+                    stream.ReadExactly(datas, 0, curSize);
 
                     Enqueue(new S.UpgradeClient()
                     {

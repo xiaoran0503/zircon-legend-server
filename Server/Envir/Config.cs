@@ -98,7 +98,7 @@ namespace Server.Envir
         }
 
         [ConfigSection("Network")]
-        public static string IPAddress { get; set; }
+        public static string IPAddress { get; set; } = "127.0.0.1";
         public static ushort Port { get; set; } 
         public static TimeSpan TimeOut { get; set; }
         public static TimeSpan PingDelay { get; set; }
@@ -111,12 +111,12 @@ namespace Server.Envir
 
         [ConfigSection("System")]
         public static TimeSpan DBSaveDelay { get; set; } 
-        public static string MapPath { get; set; } 
-        public static string MasterPassword { get; set; }
+        public static string MapPath { get; set; } = "./Map/";
+        public static string MasterPassword { get; set; } = "REDACTED";
         public static string ClientPath { get; set; } = "";
         public static DateTime ReleaseDate { get; set; } 
         public static bool TestServer { get; set; } 
-        public static string StarterGuildName { get; set; } 
+        public static string StarterGuildName { get; set; } = "新人行会";
         public static DateTime EasterEventEnd { get; set; } 
         public static DateTime HalloweenEventEnd { get; set; } 
         public static DateTime ChristmasEventEnd { get; set; }
@@ -158,31 +158,31 @@ namespace Server.Envir
         public static bool AllowAssassin { get; set; }
 
         [ConfigSection("Mail")]
-        public static string MailServer { get; set; }
+        public static string MailServer { get; set; } = "smtp.gmail.com";
         public static int MailPort { get; set; } 
         public static bool MailUseSSL { get; set; } 
-        public static string MailAccount { get; set; } 
-        public static string MailPassword { get; set; } 
-        public static string MailFrom { get; set; } 
-        public static string MailDisplayName { get; set; } 
+        public static string MailAccount { get; set; } = @"admin@zirconserver.com";
+        public static string MailPassword { get; set; } = @"REDACTED";
+        public static string MailFrom { get; set; } = "admin@zirconserver.com";
+        public static string MailDisplayName { get; set; } = "Admin";
 
         [ConfigSection("WebServer")]
-        public static string WebCommandLink { get; set; }
+        public static string WebCommandLink { get; set; } = @"https://www.zirconserver.com/Command";
 
         // 旧版 Web 端点（/Command、/BuyGameGold、/IPN）已并入 Kestrel，不再单独起 HttpListener。
         // LegacyWebEnabled=false 时不额外监听 LegacyWebPort；WebApi 端口见 [WebApi] WebApiPort。
         public static bool LegacyWebEnabled { get; set; } = true;
         public static int LegacyWebPort { get; set; } = 7081;
 
-        public static string ActivationSuccessLink { get; set; } 
-        public static string ActivationFailLink { get; set; } 
-        public static string ResetSuccessLink { get; set; } 
-        public static string ResetFailLink { get; set; } 
-        public static string DeleteSuccessLink { get; set; } 
-        public static string DeleteFailLink { get; set; } 
+        public static string ActivationSuccessLink { get; set; } = @"https://www.zirconserver.com/activation-successful/";
+        public static string ActivationFailLink { get; set; } = @"https://www.zirconserver.com/activation-unsuccessful/";
+        public static string ResetSuccessLink { get; set; } = @"https://www.zirconserver.com/password-reset-successful/";
+        public static string ResetFailLink { get; set; } = @"https://www.zirconserver.com/password-reset-unsuccessful/";
+        public static string DeleteSuccessLink { get; set; } = @"https://www.zirconserver.com/account-deletetion-successful/";
+        public static string DeleteFailLink { get; set; } = @"https://www.zirconserver.com/account-deletetion-unsuccessful/";
 
-        public static string BuyAddress { get; set; }
-        public static string ReceiverEMail { get; set; }
+        public static string BuyAddress { get; set; } = @"http://x.x.x.x/BuyGameGold";
+        public static string ReceiverEMail { get; set; } = @"REDACTED";
         public static bool ProcessGameGold { get; set; } 
         public static bool AllowBuyGammeGold { get; set; } 
 

@@ -369,7 +369,7 @@ namespace Server.WebApi.Services
             if (account == null) return false;
 
             account.Banned = false;
-            account.BanReason = null;
+            account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
             return true;
         }
