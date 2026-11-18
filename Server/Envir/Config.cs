@@ -50,7 +50,6 @@ namespace Server.Envir
             MailPassword = @"REDACTED";
             MailFrom = "admin@zirconserver.com";
             MailDisplayName = "Admin";
-            WebPrefix = @"http://*:7080/Command/";
             WebCommandLink = @"https://www.zirconserver.com/Command";
             ActivationSuccessLink = @"https://www.zirconserver.com/activation-successful/";
             ActivationFailLink = @"https://www.zirconserver.com/activation-unsuccessful/";
@@ -58,9 +57,7 @@ namespace Server.Envir
             ResetFailLink = @"https://www.zirconserver.com/password-reset-unsuccessful/";
             DeleteSuccessLink = @"https://www.zirconserver.com/account-deletetion-successful/";
             DeleteFailLink = @"https://www.zirconserver.com/account-deletetion-unsuccessful/";
-            BuyPrefix = @"http://*:7080/BuyGameGold/";
             BuyAddress = @"http://x.x.x.x/BuyGameGold";
-            IPNPrefix = @"http://*:7080/IPN/";
             ReceiverEMail = @"REDACTED";
             MaxViewRange = 18;
             ProcessGameGold = true;
@@ -170,8 +167,12 @@ namespace Server.Envir
         public static string MailDisplayName { get; set; } 
 
         [ConfigSection("WebServer")]
-        public static string WebPrefix { get; set; } 
-        public static string WebCommandLink { get; set; } 
+        public static string WebCommandLink { get; set; }
+
+        // 旧版 Web 端点（/Command、/BuyGameGold、/IPN）已并入 Kestrel，不再单独起 HttpListener。
+        // LegacyWebEnabled=false 时不额外监听 LegacyWebPort；WebApi 端口见 [WebApi] WebApiPort。
+        public static bool LegacyWebEnabled { get; set; } = true;
+        public static int LegacyWebPort { get; set; } = 7081;
 
         public static string ActivationSuccessLink { get; set; } 
         public static string ActivationFailLink { get; set; } 
@@ -180,10 +181,8 @@ namespace Server.Envir
         public static string DeleteSuccessLink { get; set; } 
         public static string DeleteFailLink { get; set; } 
 
-        public static string BuyPrefix { get; set; } 
-        public static string BuyAddress { get; set; } 
-        public static string IPNPrefix { get; set; } 
-        public static string ReceiverEMail { get; set; } 
+        public static string BuyAddress { get; set; }
+        public static string ReceiverEMail { get; set; }
         public static bool ProcessGameGold { get; set; } 
         public static bool AllowBuyGammeGold { get; set; } 
 

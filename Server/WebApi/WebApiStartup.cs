@@ -48,6 +48,11 @@ namespace Server.WebApi
                 builder.WebHost.ConfigureKestrel(options =>
                 {
                     options.ListenAnyIP(Config.WebApiPort);
+
+                    // 旧版 Web 端点（/Command、/BuyGameGold、/IPN）并入同一 Kestrel，
+                    // 可选额外监听 LegacyWebPort；Kestrel 绑定通配符端口不再需要 HttpListener 的 URL ACL/管理员权限。
+                    if (Config.LegacyWebEnabled)
+                        options.ListenAnyIP(Config.LegacyWebPort);
                 });
 
                 // Add services
@@ -75,7 +80,9 @@ namespace Server.WebApi
                     }
                 });
 
-                SEnvir.Log($"WebAPI server started on http://0.0.0.0:{Config.WebApiPort}");
+                SEnvir.Log(Config.LegacyWebEnabled
+                    ? $"WebAPI server started on http://0.0.0.0:{Config.WebApiPort} (legacy web endpoints on {Config.LegacyWebPort})"
+                    : $"WebAPI server started on http://0.0.0.0:{Config.WebApiPort}");
             }
             catch (Exception ex)
             {
@@ -161,6 +168,10 @@ namespace Server.WebApi
             GameDataEndpoints.Map(app);
             LogEndpoints.Map(app);
             ConfigEndpoints.Map(app);
+
+            // 旧版 Web 端点（邮件链接命令 / 充值占位 / PayPal IPN），随 LegacyWebEnabled 开关挂载
+            if (Config.LegacyWebEnabled)
+                LegacyWebEndpoints.Map(app);
 
             // Fallback to index.html for SPA routing
             app.MapFallbackToFile("index.html");

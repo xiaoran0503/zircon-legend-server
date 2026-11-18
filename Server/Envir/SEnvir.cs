@@ -292,14 +292,16 @@ namespace Server.Envir
         #endregion
 
         #region WebServer
-        private static HttpListener WebListener { get; set; }
-        private const string ActivationCommand = "Activation", ResetCommand = "Reset", DeleteCommand = "Delete";
-        private const string ActivationKey = "ActivationKey", ResetKey = "ResetKey", DeleteKey = "DeleteKey";
+        // 旧版 Web 命令（邮件链接激活 / 重置密码 / 删除账号）与 PayPal IPN 回调，
+        // 已从独立 HttpListener 迁移到 Kestrel 统一托管（见 WebApi/Endpoints/LegacyWebEndpoints.cs）。
+        // 本区只保留与主循环交互的队列、充值对照表与处理逻辑，监听生命周期由 Kestrel 负责。
+        internal const string ActivationCommand = "Activation", ResetCommand = "Reset", DeleteCommand = "Delete";
+        internal const string ActivationKey = "ActivationKey", ResetKey = "ResetKey", DeleteKey = "DeleteKey";
 
         private const string Completed = "Completed";
         private const string Currency = "GBP";
 
-        private static Dictionary<decimal, int> GoldTable = new Dictionary<decimal, int>
+        private static readonly Dictionary<decimal, int> GoldTable = new Dictionary<decimal, int>
         {
             {5M, 500},
             {10M, 1030},
@@ -314,115 +316,33 @@ namespace Server.Envir
             InvalidPath = @".\Database\Store\Invalid\",
             CompletePath = @".\Database\Store\Complete\";
 
-        private static HttpListener BuyListener, IPNListener;
         public static ConcurrentQueue<IPNMessage> Messages = new ConcurrentQueue<IPNMessage>();
         public static List<IPNMessage> PaymentList = new List<IPNMessage>(), HandledPayments = new List<IPNMessage>();
 
-        public static void StartWebServer(bool log = true)
+        /// <summary>
+        /// 处理旧版 /Command/ 邮件链接命令，返回应跳转的结果链接；命令或 key 缺失时返回 null。
+        /// 语义与原 HttpListener 版本一致：仅按对应开关放行，命令入队后由主循环消费。
+        /// </summary>
+        internal static string? HandleLegacyCommand(string? command, string? activationKey, string? resetKey, string? deleteKey)
         {
-            try
+            switch (command)
             {
-                WebCommandQueue = new ConcurrentQueue<WebCommand>();
-
-                WebListener = new HttpListener();
-                WebListener.Prefixes.Add(Config.WebPrefix);
-
-                WebListener.Start();
-                WebListener.BeginGetContext(WebConnection, null);
-
-                BuyListener = new HttpListener();
-                BuyListener.Prefixes.Add(Config.BuyPrefix);
-
-                IPNListener = new HttpListener();
-                IPNListener.Prefixes.Add(Config.IPNPrefix);
-
-                BuyListener.Start();
-                BuyListener.BeginGetContext(BuyConnection, null);
-
-                IPNListener.Start();
-                IPNListener.BeginGetContext(IPNConnection, null);
-
-
-
-                WebServerStarted = true;
-
-                if (log) Log("Web 服务已启动.");
-            }
-            catch (Exception ex)
-            {
-                WebServerStarted = false;
-                Log(ex);
-
-                if (WebListener != null && WebListener.IsListening)
-                    WebListener.Stop();
-                WebListener = null;
-
-                if (BuyListener != null && BuyListener.IsListening)
-                    BuyListener.Stop();
-                BuyListener = null;
-
-                if (IPNListener != null && IPNListener.IsListening)
-                    IPNListener.Stop();
-                IPNListener = null;
+                case ActivationCommand:
+                    return HandleActivation(activationKey);
+                case ResetCommand:
+                    return HandleResetPassword(resetKey);
+                case DeleteCommand:
+                    return HandleDeleteAccount(deleteKey);
+                default:
+                    return null;
             }
         }
-        public static void StopWebServer(bool log = true)
+
+        private static string? HandleActivation(string? key)
         {
-            HttpListener expiredWebListener = WebListener;
-            WebListener?.Stop();
-            WebListener = null;
+            if (string.IsNullOrEmpty(key)) return null;
 
-            HttpListener expiredBuyListener = BuyListener;
-            expiredBuyListener?.Stop();
-            BuyListener = null;
-            HttpListener expiredIPNListener = IPNListener;
-            expiredIPNListener?.Stop();
-            IPNListener = null;
-            
-
-            WebServerStarted = false;
-            expiredWebListener.Stop();
-            expiredBuyListener.Stop();
-            expiredIPNListener.Stop();
-
-            if (log) Log("Web 服务已停止.");            
-        }
-
-        private static void WebConnection(IAsyncResult result)
-        {
-            try
-            {
-                HttpListenerContext context = WebListener?.EndGetContext(result);
-
-                string command = context?.Request?.QueryString["Type"];
-
-                switch (command)
-                {
-                    case ActivationCommand:
-                        Activation(context);
-                        break;
-                    case ResetCommand:
-                        ResetPassword(context);
-                        break;
-                    case DeleteCommand:
-                        DeleteAccount(context);
-                        break;
-                }
-            }
-            catch { }
-            finally
-            {
-                if (WebListener != null && WebListener.IsListening)
-                    WebListener.BeginGetContext(WebConnection, null);
-            }
-        }
-        private static void Activation(HttpListenerContext context)
-        {
-            string key = context.Request.QueryString[ActivationKey];
-
-            if (string.IsNullOrEmpty(key)) return;
-
-            AccountInfo account = null;
+            AccountInfo? account = null;
             for (int i = 0; i < AccountInfoList.Count; i++)
             {
                 AccountInfo temp = AccountInfoList[i]; //Different Threads, Caution must be taken to prevent errors
@@ -435,20 +355,16 @@ namespace Server.Envir
             if (Config.AllowWebActivation && account != null)
             {
                 WebCommandQueue.Enqueue(new WebCommand(CommandType.Activation, account));
-                context.Response.Redirect(Config.ActivationSuccessLink);
+                return Config.ActivationSuccessLink;
             }
-            else
-                context.Response.Redirect(Config.ActivationFailLink);
-
-            context.Response.Close();
+            return Config.ActivationFailLink;
         }
-        private static void ResetPassword(HttpListenerContext context)
+
+        private static string? HandleResetPassword(string? key)
         {
-            string key = context.Request.QueryString[ResetKey];
+            if (string.IsNullOrEmpty(key)) return null;
 
-            if (string.IsNullOrEmpty(key)) return;
-
-            AccountInfo account = null;
+            AccountInfo? account = null;
             for (int i = 0; i < AccountInfoList.Count; i++)
             {
                 AccountInfo temp = AccountInfoList[i]; //Different Threads, Caution must be taken to prevent errors
@@ -461,18 +377,16 @@ namespace Server.Envir
             if (Config.AllowWebResetPassword && account != null && account.ResetTime.AddMinutes(25) > Now)
             {
                 WebCommandQueue.Enqueue(new WebCommand(CommandType.PasswordReset, account));
-                context.Response.Redirect(Config.ResetSuccessLink);
+                return Config.ResetSuccessLink;
             }
-            else
-                context.Response.Redirect(Config.ResetFailLink);
-
-            context.Response.Close();
+            return Config.ResetFailLink;
         }
-        private static void DeleteAccount(HttpListenerContext context)
-        {
-            string key = context.Request.QueryString[DeleteKey];
 
-            AccountInfo account = null;
+        private static string? HandleDeleteAccount(string? key)
+        {
+            if (string.IsNullOrEmpty(key)) return null;
+
+            AccountInfo? account = null;
             for (int i = 0; i < AccountInfoList.Count; i++)
             {
                 AccountInfo temp = AccountInfoList[i]; //Different Threads, Caution must be taken to prevent errors
@@ -485,66 +399,25 @@ namespace Server.Envir
             if (Config.AllowDeleteAccount && account != null)
             {
                 WebCommandQueue.Enqueue(new WebCommand(CommandType.AccountDelete, account));
-                context.Response.Redirect(Config.DeleteSuccessLink);
+                return Config.DeleteSuccessLink;
             }
-            else
-                context.Response.Redirect(Config.DeleteFailLink);
-
-            context.Response.Close();
+            return Config.DeleteFailLink;
         }
 
-        private static void BuyConnection(IAsyncResult result)
-        {
-            try
-            {
-                //HttpListenerContext context = BuyListener?.EndGetContext(result);
-
-                //string characterName = context?.Request?.QueryString["Character"];
-
-                //CharacterInfo character = null;
-                //for (int i = 0; i < CharacterInfoList.Count; i++)
-                //{
-                //    if (string.Compare(CharacterInfoList[i].CharacterName, characterName, StringComparison.OrdinalIgnoreCase) != 0) continue;
-
-                //    character = CharacterInfoList[i];
-                //    break;
-                //}
-
-                //if (character?.Account?.Key != context?.Request?.QueryString["Key"])
-                //    character = null;
-
-                //string response = character == null ? Properties.Resources.CharacterNotFound : Properties.Resources.BuyGameGold.Replace("$CHARACTERNAME$", character.CharacterName);
-
-                //if (context != null && context.Response != null)
-                //using (StreamWriter writer = new StreamWriter(context.Response.OutputStream, context.Request.ContentEncoding))
-                //    writer.Write(response);
-            }
-            catch { }
-            finally
-            {
-                if (BuyListener != null && BuyListener.IsListening) //IsBound ?
-                    BuyListener.BeginGetContext(BuyConnection, null);
-            }
-
-        }
-        private static void IPNConnection(IAsyncResult result)
+        /// <summary>
+        /// PayPal IPN 回调：后台向 PayPal 校验报文，落盘后入队，由主循环 ProcessGameGold 消费。
+        /// 校验在后台线程进行，调用方（Kestrel 端点）立即返回，与原 HttpListener 行为一致。
+        /// </summary>
+        internal static void ProcessIpnCallback(string rawMessage)
         {
             const string LiveURL = @"https://ipnpb.paypal.com/cgi-bin/webscr";
-
             const string verified = "VERIFIED";
 
-            try
+            if (string.IsNullOrEmpty(rawMessage)) return;
+
+            _ = Task.Run(() =>
             {
-                if (IPNListener == null || !IPNListener.IsListening) return;
-
-                HttpListenerContext context = IPNListener.EndGetContext(result);
-
-                string rawMessage;
-                using (StreamReader readStream = new StreamReader(context.Request.InputStream, Encoding.UTF8))
-                    rawMessage = readStream.ReadToEnd();
-
-
-                Task.Run(() =>
+                try
                 {
                     string data = "cmd=_notify-validate&" + rawMessage;
 
@@ -561,7 +434,6 @@ namespace Server.Envir
                     {
                         IPNMessage message = new IPNMessage { Message = rawMessage, Verified = reader.ReadToEnd() == verified };
 
-
                         if (!Directory.Exists(VerifiedPath))
                             Directory.CreateDirectory(VerifiedPath);
 
@@ -574,29 +446,19 @@ namespace Server.Envir
 
                         message.FileName = path;
 
-
                         Messages.Enqueue(message);
                     }
-                });
-
-                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.Response.Close();
-            }
-            catch (Exception ex)
-            {
-                Log(ex);
-            }
-            finally
-            {
-                if (IPNListener != null && IPNListener.IsListening) //IsBound ?
-                    IPNListener.BeginGetContext(IPNConnection, null);
-            }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex);
+                }
+            });
         }
         #endregion
 
         public static bool Started { get; set; }
         public static bool NetworkStarted { get; set; }
-        public static bool WebServerStarted { get; set; }
         public static bool Saving { get; private set; }
         public static Thread EnvirThread { get; private set; }
 
@@ -727,7 +589,7 @@ namespace Server.Envir
         #region Game Variables
         public static Random Random;
 
-        public static ConcurrentQueue<WebCommand> WebCommandQueue;
+        public static ConcurrentQueue<WebCommand> WebCommandQueue = new();
 
         public static Dictionary<MapInfo, Map> Maps = new Dictionary<MapInfo, Map>();
         
@@ -1426,7 +1288,6 @@ namespace Server.Envir
 
             StartEnvir();
             StartNetwork();
-            StartWebServer();
 
             Started = NetworkStarted;
             
@@ -1744,7 +1605,6 @@ namespace Server.Envir
                 }
             }
 
-            StopWebServer();
             StopNetwork();
 
             while (Saving) Thread.Sleep(1);
