@@ -115,3 +115,6 @@ CLAUDE.md
 /datas
 /Server/datas
 /nul
+
+# 运行期生成的 PayPal IPN 报文存储目录
+/Database

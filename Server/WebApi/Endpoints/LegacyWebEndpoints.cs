@@ -13,17 +13,14 @@ namespace Server.WebApi.Endpoints
     {
         public static void Map(WebApplication app)
         {
-            // 邮件链接命令：/Command/?Type=Activation|Reset|Delete&...
-            app.MapGet("/Command/", HandleCommand);
-            app.MapGet("/Command", HandleCommand);
+            // 邮件链接命令：/Command?Type=Activation|Reset|Delete&...（兼容带/不带尾斜杠）
+            app.MapGet("/Command/{**rest}", HandleCommand);
 
             // 充值购买页：上游实现未启用，返回 501 避免请求悬挂。
-            app.MapGet("/BuyGameGold/", BuyGameGoldPlaceholder);
-            app.MapGet("/BuyGameGold", BuyGameGoldPlaceholder);
+            app.MapGet("/BuyGameGold/{**rest}", BuyGameGoldPlaceholder);
 
             // PayPal IPN 异步回调
-            app.MapPost("/IPN/", async (HttpContext context) => await HandleIpn(context));
-            app.MapPost("/IPN", async (HttpContext context) => await HandleIpn(context));
+            app.MapPost("/IPN/{**rest}", async (HttpContext context) => await HandleIpn(context));
         }
 
         private static IResult BuyGameGoldPlaceholder()
